@@ -12,6 +12,11 @@ export default function(config) {
     vm._scales = {};
     vm._axes = {};
 
+    vm.CIRCLE_RADIANS = 2 * Math.PI;
+
+    // The first axis must be at the circle's top.
+    vm.RADIANS_TO_ROTATE = vm.CIRCLE_RADIANS / -4;
+
     // Set defaults.
     if(!vm._config.levels) {
       vm._config.levels = 5;
@@ -93,6 +98,50 @@ export default function(config) {
       .style('stroke', 'gray');
   }
 
+  Radar.prototype.extractAxes = function(data) {
+    var result,
+      vm = this,
+      axes = vm._config.axesFrom,
+      radiansPerAxis;
+
+    result = data.reduce(
+      function(prev, item) {
+        return prev.indexOf(item[axes]) > -1
+          ? prev
+          : prev.concat(item[axes]);
+      }, []);
+
+    radiansPerAxis = (vm.CIRCLE_RADIANS / result.length);
+
+    return result.map(
+      function(item, idx, arr) {
+        return [
+          item,
+          (idx * radiansPerAxis) + vm.RADIANS_TO_ROTATE
+        ];
+      });
+  }
+
+  Radar.prototype.drawAxes = function() {
+    var vm = this,
+      svg = vm._chart._svg;
+    console.log(vm._axes);
+    svg.selectAll('line.axis')
+      .data(vm._axes, function(d) { return d[0]; })
+      .enter()
+      .append('line')
+      .classed('axis', true)
+      .attr('x1', vm._center.x)
+      .attr('y1', vm._center.y)
+      .attr('x2', function(d, i) {
+        return vm._center.x + (vm._radius * Math.cos(d[1]))
+      })
+      .attr('y2', function(d, i) {
+        return vm._center.y + (vm._radius * Math.sin(d[1]))
+      })
+      .style('stroke', 'gray');
+  }
+
   // DBOX internals.
 
   Radar.prototype.chart = function(chart) {
@@ -105,6 +154,8 @@ export default function(config) {
     var vm = this;
     vm._data = data;
     // @TODO Make further processing of data, if required.
+    vm._axes = vm.extractAxes(vm._data);
+    console.log(vm._axes);
     return vm;
   }
 
@@ -116,19 +167,21 @@ export default function(config) {
 
   Radar.prototype.axes = function(axes) {
     var vm = this;
-    vm._axes = axes;
+    // TODO Do nothing?
+    //vm._axes = axes;
     return vm;
   }
 
   Radar.prototype.domains = function() {
     var vm = this;
-    // @TODO Implement
+    // TODO Implement
     return vm;
   }
 
   Radar.prototype.draw = function() {
     var vm = this;
     vm.drawLevels();
+    vm.drawAxes();
   }
 
   return new Radar(config);
