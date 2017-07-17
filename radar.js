@@ -12,6 +12,7 @@ export default function(config) {
     vm._scales = {};
     vm._axes = {};
     vm._axesData = {};
+    vm._filter = null;
 
     vm.CIRCLE_RADIANS = 2 * Math.PI;
 
@@ -161,7 +162,17 @@ export default function(config) {
   Radar.prototype.drawPolygons = function(data) {
     var vm = this,
       svg = vm._chart._svg,
-      groupedData;
+      groupedData, selection;
+
+    // Used for the transitions where the polygons expand from
+    // or shrink to the center.
+    function centerPoints(data) {
+      var center = [vm._center.x, vm._center.y].join(',')
+      return data.points.map(function(p) {
+        // All polygon's points move to the center.
+        return center;
+      }).join(' ');
+    }
 
     // Prepare the data.
     groupedData = data.reduce(function(bundle, row) {
@@ -178,16 +189,29 @@ export default function(config) {
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
-    svg.selectAll('polygon')
-      .data(groupedData, function(d) { return d.polygon; })
-      .enter()
+    selection = svg.selectAll('polygon')
+      .data(groupedData, function(d) { return d.polygon; });
+
+    selection.enter()
       .append('polygon')
+      .attr('points', centerPoints)
+      .transition()
       .attr('points', function(d) { return d.points.join(' '); })
-      .style('stroke', function(d, i) { return d.color; })
       .style('stroke-width', '1px')
+      .style('stroke', function(d, i) { return d.color; })
       .style('fill', function(d, i) { return d.color; })
       .style('fill-opacity', 0.6);
 
+    selection
+      .transition()
+      .attr('points', function(d) { return d.points.join(' '); })
+      .style('stroke', function(d, i) { return d.color; })
+      .style('fill', function(d, i) { return d.color; });
+
+    selection.exit()
+      .transition()
+      .attr('points', centerPoints)
+      .remove();
   }
 
   Radar.prototype.xOf = function(rads, value) {
@@ -224,6 +248,10 @@ export default function(config) {
       polygKey = vm._config.polygonsFrom,
       axesHash = vm._axesData.hash;
 
+    if(typeof vm._filter === 'function') {
+      data = data.filter(vm._filter);
+    }
+
     return data.map(function(row) {
       var axis = row[axisKey],
         rads = axesHash[axis].rads,
@@ -239,6 +267,12 @@ export default function(config) {
         rawData: row
       };
     });
+  }
+
+  Radar.prototype.filter = function(fun) {
+    var vm = this;
+    vm._filter = fun;
+    return vm;
   }
 
   // DBOX internals.
