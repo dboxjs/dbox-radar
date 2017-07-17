@@ -187,45 +187,7 @@ export default function(config) {
       .style('stroke-width', '1px')
       .style('fill', function(d, i) { return d.color; })
       .style('fill-opacity', 0.6);
-  }
 
-  Radar.prototype.groupData = function(data) {
-    var vm = this,
-      bundle = {
-        min: 0,
-        max: 0,
-        polygons: [],
-        data: []
-      };
-
-
-    return data.reduce(function(reduced, current) {
-      var polyg = current[vm._config.polygonsFrom],
-        axis = current[vm._config.axesFrom],
-        value = current[vm._config.valuesFrom],
-        polygIdx;
-
-      polygIdx = reduced.polygons.indexOf(polyg);
-      if(polygIdx == -1) {
-        polygIdx = reduced.polygons.push(polyg) - 1;
-        reduced.data.push([]);
-      }
-
-      // Add the values to its polyg.
-      reduced.data[polygIdx].push({
-        axis: axis,
-        value: value,
-        polygon: polyg,
-        data: current
-      });
-
-      // Track the max value in the data set.
-      if(reduced.max < value) {
-        reduced.max = value;
-      }
-
-      return reduced;
-    }, bundle);
   }
 
   Radar.prototype.xOf = function(rads, value) {
@@ -293,12 +255,8 @@ export default function(config) {
     // @TODO Make further processing of data, if required.
     vm._axesData = vm.extractAxes(vm._data);
 
-    dataBundle = vm.groupData(vm._data);
+    vm._minMax = vm.minMax(vm._data);
 
-    vm._minMax = vm.minMax(vm._data); //[dataBundle.min, dataBundle.max];
-
-    vm._groupedData = dataBundle.data;
-    console.log(vm._groupedData);
     return vm;
   }
 
