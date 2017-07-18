@@ -23,6 +23,7 @@ export default function(config) {
     vm._filter = null;
     vm._minMax = [0, 0];
     vm._viewData = [];
+    vm._colorMap = [];
 
     // Set defaults.
     if(!vm._config.levels) {
@@ -141,6 +142,21 @@ export default function(config) {
     };
   }
 
+  Radar.prototype.buildColorMap = function(data) {
+    var vm = this,
+      colros = vm._config.colors;
+    return data.reduce(function(cMap, row, idx) {
+      var polyg = row[vm._config.polygonsFrom],
+        cIdx = cMap.index.indexOf(polyg);
+
+      if(cIdx == -1) {
+        cIdx = cMap.index.push(polyg) - 1;
+        cMap.hash[polyg] = colors[cIdx];
+      }
+      return cMap;
+    }, {index: [], hash: {}}).hash;
+  }
+
   Radar.prototype.drawAxes = function() {
     var vm = this,
       svg = vm._chart._svg,
@@ -189,7 +205,19 @@ export default function(config) {
 
   Radar.prototype.drawPoints = function() {
     var vm = this,
-      svg = vm._chart._svg;
+      svg = vm._chart._svg,
+      selection;
+
+    selection = svg.selectAll('circle.vertex')
+      .data(this._viewData);
+
+    selection.enter()
+      .append('circle')
+      .classed('vertex', true)
+      .attr('cx', function(d) { return d.xy[0]; })
+      .attr('cy', function(d) { return d.xy[1]; })
+      .attr('r', 3)
+      .attr('fill', function(d) { return d.color; });
   }
 
   Radar.prototype.drawPolygons = function() {
@@ -217,7 +245,7 @@ export default function(config) {
         bundle.polygons.push({
           points: [],
           polygon: row.polygon,
-          color: vm._config.colors[polygIdx]
+          color: row.color
         });
       }
       bundle.polygons[polygIdx].points.push(row.xy.join(','));
@@ -237,6 +265,17 @@ export default function(config) {
       .style('stroke', function(d, i) { return d.color; })
       .style('fill', function(d, i) { return d.color; })
       .style('fill-opacity', 0.6);
+      /*.each(function(pol, i) {
+         svg.selectAll('circle.vertex')
+          .data(pol.points.map(function(pt) { return pt.split(','); }))
+          .enter()
+          .append('circle')
+          .classed('vertex', true)
+          .attr('cx', function(d) { return d[0]; })
+          .attr('cy', function(d) { return d[1]; })
+          .attr('r', 3)
+          .attr('fill', pol.color);
+      });*/
 
     selection
       .transition()
@@ -288,6 +327,7 @@ export default function(config) {
     return data.map(function(row) {
       var axis = row[axisKey],
         rads = axesHash[axis].rads,
+        polygon = row[polygKey],
         val = scale(row[valKey]);
       return {
         xy: [
@@ -295,8 +335,9 @@ export default function(config) {
           vm.yOf(rads, val)
         ],
         value: val,
-        polygon: row[polygKey],
+        polygon: polygon,
         axis: axis,
+        color: vm._colorMap[polygon],
         rawData: row
       };
     });
@@ -348,6 +389,11 @@ export default function(config) {
     var vm = this,
       data = vm._data;
 
+    // Build the color map previusly to filtering in order to keep the
+    // association between colors and polygons even when some of them (the
+    // polygons) have been filtered out.
+    vm._colorMap = vm.buildColorMap(data);
+
     if(typeof vm._filter === 'function') {
       data = data.filter(vm._filter);
     }
@@ -356,6 +402,7 @@ export default function(config) {
 
     vm.drawLevels();
     vm.drawAxes();
+    vm.drawPoints();
     vm.drawPolygons();
   }
 
