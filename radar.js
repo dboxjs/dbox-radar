@@ -7,24 +7,31 @@ import * as d3 from 'd3';
 export default function(config) {
   function Radar(config) {
     var vm = this;
-    vm._config = config ? config : {};
-    vm._data = [];
-    vm._scales = {};
-    vm._axes = {};
-    vm._axesData = {};
-    vm._filter = null;
 
     vm.CIRCLE_RADIANS = 2 * Math.PI;
 
     // The first axis must be at the circle's top.
     vm.RADIANS_TO_ROTATE = vm.CIRCLE_RADIANS / -4;
 
+    vm.DEFAULT_TRANSOTION_DURATION = 400;
+
+    vm._config = config ? config : {};
+    vm._data = [];
+    vm._scales = {};
+    vm._axes = {};
+    vm._axesData = {};
+    vm._filter = null;
+    vm._minMax = [0, 0];
+    vm._viewData = [];
+
     // Set defaults.
     if(!vm._config.levels) {
       vm._config.levels = 5;
     }
 
-    vm._minMax = [0, 0];
+    if(!vm._config.transitionDuration) {
+      vm._config.transitionDuration = vm.DEFAULT_TRANSOTION_DURATION;
+    }
 
     // Calculate basic data.
     vm._center = {
@@ -136,22 +143,48 @@ export default function(config) {
 
   Radar.prototype.drawAxes = function() {
     var vm = this,
-      svg = vm._chart._svg;
+      svg = vm._chart._svg,
+      duration = vm._config.transitionDuration,
+      selection;
+
     console.log(vm._axesData);
-    svg.selectAll('line.axis')
-      .data(vm._axesData.list, function(d) { return d.axis; })
-      .enter()
+    selection = svg.selectAll('line.axis')
+      .data(vm._axesData.list, function(d) { return d.axis; });
+
+    selection.enter()
       .append('line')
       .classed('axis', true)
       .attr('x1', vm._center.x)
       .attr('y1', vm._center.y)
+      .style('stroke', 'gray')
+      .attr('x2', vm._center.x)
+      .attr('y2', vm._center.y)
+      .transition()
+      .duration(duration)
       .attr('x2', function(d, i) {
         return vm.xOf(d.rads, vm._radius + 8);
       })
       .attr('y2', function(d, i) {
         return vm.yOf(d.rads, vm._radius + 8);
+      });
+
+    selection
+      .transition()
+      .duration(duration)
+      .attr('x2', function(d, i) {
+        return vm.xOf(d.rads, vm._radius + 8);
       })
-      .style('stroke', 'gray');
+      .attr('y2', function(d, i) {
+        return vm.yOf(d.rads, vm._radius + 8);
+      });
+
+    selection.exit()
+      .transition()
+      .duration(duration)
+      .attr('x2', vm._center.x)
+      .attr('y2', vm._center.y)
+      .remove();
+
   }
 
   Radar.prototype.drawPoints = function() {
@@ -159,9 +192,11 @@ export default function(config) {
       svg = vm._chart._svg;
   }
 
-  Radar.prototype.drawPolygons = function(data) {
+  Radar.prototype.drawPolygons = function() {
     var vm = this,
+      data = vm._viewData,
       svg = vm._chart._svg,
+      duration = vm._config.transitionDuration,
       groupedData, selection;
 
     // Used for the transitions where the polygons expand from
@@ -175,17 +210,17 @@ export default function(config) {
     }
 
     // Prepare the data.
-    groupedData = data.reduce(function(bundle, row) {
-      var poligIdx = bundle.keys.indexOf(row.polygon);
-      if(poligIdx == -1) {
-        poligIdx = bundle.keys.push(row.polygon) - 1;
+    groupedData = data.reduce(function(bundle, row, idx) {
+      var polygIdx = bundle.keys.indexOf(row.polygon);
+      if(polygIdx == -1) {
+        polygIdx = bundle.keys.push(row.polygon) - 1;
         bundle.polygons.push({
           points: [],
           polygon: row.polygon,
-          color: vm._config.colors[poligIdx]
+          color: vm._config.colors[polygIdx]
         });
       }
-      bundle.polygons[poligIdx].points.push(row.xy.join(','));
+      bundle.polygons[polygIdx].points.push(row.xy.join(','));
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
@@ -196,6 +231,7 @@ export default function(config) {
       .append('polygon')
       .attr('points', centerPoints)
       .transition()
+      .duration(duration)
       .attr('points', function(d) { return d.points.join(' '); })
       .style('stroke-width', '1px')
       .style('stroke', function(d, i) { return d.color; })
@@ -204,12 +240,14 @@ export default function(config) {
 
     selection
       .transition()
+      .duration(duration)
       .attr('points', function(d) { return d.points.join(' '); })
       .style('stroke', function(d, i) { return d.color; })
       .style('fill', function(d, i) { return d.color; });
 
     selection.exit()
       .transition()
+      .duration(duration)
       .attr('points', centerPoints)
       .remove();
   }
@@ -239,18 +277,13 @@ export default function(config) {
   }
 
   // Build the data with coords.
-  Radar.prototype.dataForVisualization = function() {
+  Radar.prototype.dataForVisualization = function(data) {
     var vm = this,
-      data = vm._data,
       scale = vm._scales.x,
       axisKey = vm._config.axesFrom,
       valKey = vm._config.valuesFrom,
       polygKey = vm._config.polygonsFrom,
       axesHash = vm._axesData.hash;
-
-    if(typeof vm._filter === 'function') {
-      data = data.filter(vm._filter);
-    }
 
     return data.map(function(row) {
       var axis = row[axisKey],
@@ -286,11 +319,6 @@ export default function(config) {
   Radar.prototype.data = function(data) {
     var vm = this, dataBundle;
     vm._data = data;
-    // @TODO Make further processing of data, if required.
-    vm._axesData = vm.extractAxes(vm._data);
-
-    vm._minMax = vm.minMax(vm._data);
-
     return vm;
   }
 
@@ -311,16 +339,24 @@ export default function(config) {
 
   Radar.prototype.domains = function() {
     var vm = this;
+    vm._minMax = vm.minMax(vm._data);
     vm._scales.x.domain(vm._minMax);
     return vm;
   }
 
   Radar.prototype.draw = function() {
     var vm = this,
-      preparedData = vm.dataForVisualization();
+      data = vm._data;
+
+    if(typeof vm._filter === 'function') {
+      data = data.filter(vm._filter);
+    }
+    vm._axesData = vm.extractAxes(data);
+    vm._viewData = vm.dataForVisualization(data);
+
     vm.drawLevels();
     vm.drawAxes();
-    vm.drawPolygons(preparedData);
+    vm.drawPolygons();
   }
 
   return new Radar(config);
