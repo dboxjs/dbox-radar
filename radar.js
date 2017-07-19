@@ -243,51 +243,105 @@ export default function(config) {
       if(polygIdx == -1) {
         polygIdx = bundle.keys.push(row.polygon) - 1;
         bundle.polygons.push({
-          points: [],
           polygon: row.polygon,
-          color: row.color
+          color: row.color,
+          points: [],
+          values: []
         });
       }
+      bundle.polygons[polygIdx].values.push(row);
       bundle.polygons[polygIdx].points.push(row.xy.join(','));
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
-    selection = svg.selectAll('polygon')
+    var polygonSelection, vertexSelection, gs, gsExit, gsEnter;
+
+    //svg.selectAll('g.polygon-container').remove();
+
+    gs = svg.selectAll('g.polygon-container')
+      .data(groupedData, function(d) { return d.polygon + '-container'; });
+
+    gsEnter = gs.enter()
+      .append('g')
+      .attr('class', 'polygon-container');
+
+    gsExit = gs.exit().transition().duration(duration).remove();
+
+    gsEnter.selectAll('polygon.category')
+      .data(function(d) { return [d]; }, function(d) { return d.polygon; })
+      .enter()
+      .append('polygon')
+      .classed('category', true)
+      .attr('points', centerPoints)
+
+    gsEnter.selectAll('circle.vertex')
+      .data(
+        function(d) { return d.values; },
+        function(d) { return d.polygon + '-' + d.axis; }
+      )
+      .enter()
+      .append('circle')
+      .classed('vertex', true)
+      .attr('cx', vm._center.x)
+      .attr('cy', vm._center.y)
+      .transition()
+      .duration(duration)
+      .attr('cx', function(d) { return d.xy[0]; })
+      .attr('cy', function(d) { return d.xy[1]; })
+      .attr('r', 3)
+      .attr('fill', function(d) { return d.color; });
+
+    // Handle update and exit selection of the polygons.
+
+    polygonSelection = svg.selectAll('polygon.category')
       .data(groupedData, function(d) { return d.polygon; });
 
-    selection.enter()
-      .append('polygon')
-      .attr('points', centerPoints)
+    polygonSelection
       .transition()
       .duration(duration)
       .attr('points', function(d) { return d.points.join(' '); })
-      .style('stroke-width', '1px')
       .style('stroke', function(d, i) { return d.color; })
       .style('fill', function(d, i) { return d.color; })
-      .style('fill-opacity', 0.6);
-      /*.each(function(pol, i) {
-         svg.selectAll('circle.vertex')
-          .data(pol.points.map(function(pt) { return pt.split(','); }))
-          .enter()
-          .append('circle')
-          .classed('vertex', true)
-          .attr('cx', function(d) { return d[0]; })
-          .attr('cy', function(d) { return d[1]; })
-          .attr('r', 3)
-          .attr('fill', pol.color);
-      });*/
+      .style('fill-opacity', 0.6)
+      .style('stroke-width', '1px');
 
-    selection
-      .transition()
-      .duration(duration)
-      .attr('points', function(d) { return d.points.join(' '); })
-      .style('stroke', function(d, i) { return d.color; })
-      .style('fill', function(d, i) { return d.color; });
-
-    selection.exit()
+    polygonSelection.exit()
       .transition()
       .duration(duration)
       .attr('points', centerPoints)
+      .remove();
+
+    // Handle update and exit selection of the vertexes.
+
+    vertexSelection = gs.selectAll('circle.vertex')
+      .data(
+        function(d) { return d.values; },
+        function(d) { return d.polygon + '-' + d.axis; }
+      );
+
+    vertexSelection
+      .transition()
+      .duration(duration)
+      .attr('cx', function(d) { return d.xy[0]; })
+      .attr('cy', function(d) { return d.xy[1]; });
+
+    vertexSelection.enter()
+      .append('circle')
+      .classed('vertex', true)
+      .attr('cx', vm._center.x)
+      .attr('cy', vm._center.y)
+      .transition()
+      .duration(duration)
+      .attr('cx', function(d) { return d.xy[0]; })
+      .attr('cy', function(d) { return d.xy[1]; })
+      .attr('r', 3)
+      .attr('fill', function(d) { return d.color; });
+
+    vertexSelection.exit()
+      .transition()
+      .duration(duration)
+      .attr('cx', vm._center.x)
+      .attr('cy', vm._center.y)
       .remove();
   }
 
@@ -402,7 +456,7 @@ export default function(config) {
 
     vm.drawLevels();
     vm.drawAxes();
-    vm.drawPoints();
+    //vm.drawPoints();
     vm.drawPolygons();
   }
 
