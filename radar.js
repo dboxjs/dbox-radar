@@ -200,24 +200,6 @@ export default function(config) {
       .attr('x2', vm._center.x)
       .attr('y2', vm._center.y)
       .remove();
-
-  }
-
-  Radar.prototype.drawPoints = function() {
-    var vm = this,
-      svg = vm._chart._svg,
-      selection;
-
-    selection = svg.selectAll('circle.vertex')
-      .data(this._viewData);
-
-    selection.enter()
-      .append('circle')
-      .classed('vertex', true)
-      .attr('cx', function(d) { return d.xy[0]; })
-      .attr('cy', function(d) { return d.xy[1]; })
-      .attr('r', 3)
-      .attr('fill', function(d) { return d.color; });
   }
 
   Radar.prototype.drawPolygons = function() {
@@ -225,17 +207,8 @@ export default function(config) {
       data = vm._viewData,
       svg = vm._chart._svg,
       duration = vm._config.transitionDuration,
-      groupedData, selection;
-
-    // Used for the transitions where the polygons expand from
-    // or shrink to the center.
-    function centerPoints(data) {
-      var center = [vm._center.x, vm._center.y].join(',')
-      return data.points.map(function(p) {
-        // All polygon's points move to the center.
-        return center;
-      }).join(' ');
-    }
+      groupedData, selection,
+      gs, gsExit, gsEnter;;
 
     // Prepare the data.
     groupedData = data.reduce(function(bundle, row, idx) {
@@ -254,10 +227,6 @@ export default function(config) {
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
-    var polygonSelection, vertexSelection, gs, gsExit, gsEnter;
-
-    //svg.selectAll('g.polygon-container').remove();
-
     gs = svg.selectAll('g.polygon-container')
       .data(groupedData, function(d) { return d.polygon + '-container'; });
 
@@ -265,84 +234,141 @@ export default function(config) {
       .append('g')
       .attr('class', 'polygon-container');
 
-    gsExit = gs.exit().transition().duration(duration).remove();
+    gsExit = gs.exit();
+    gsExit.transition().duration(duration).remove();
 
-    gsEnter.selectAll('polygon.category')
-      .data(function(d) { return [d]; }, function(d) { return d.polygon; })
+    vm._buildNestedVertexes(gs, gsEnter, gsExit);
+    vm._buildNestedPolygons(gs, gsEnter, gsExit);
+  }
+
+  Radar.prototype._buildNestedVertexes = function(update, enter, exit) {
+    var vm = this,
+      duration = vm._config.transitionDuration,
+      selector = 'circle.vertex',
+      toUpdate;
+
+    function appendHelper(selection) {
+      selection
+        .append('circle')
+        .attr('class', 'vertex')
+        .attr('cx', vm._center.x)
+        .attr('cy', vm._center.y)
+        .attr('r', 4)
+        .attr('fill', function(d) { return d.color; })
+        .call(updateHelper);
+
+    }
+
+    function removeHelper(selection) {
+      selection
+        .transition()
+        .duration(duration)
+        .attr('cx', vm._center.x)
+        .attr('cy', vm._center.y)
+        .remove();
+    }
+
+    function updateHelper(selection) {
+      selection
+        .transition()
+        .duration(duration)
+        .attr('cx', function(d) { return d.xy[0]; })
+        .attr('cy', function(d) { return d.xy[1]; });
+    }
+
+    function dataFunc(d) { return d.values; }
+
+    function keyFunc(d) { return d.polygon + '-' + d.axis; }
+
+    toUpdate = update.selectAll(selector)
+      .data(dataFunc, keyFunc);
+
+    toUpdate
+      .call(updateHelper);
+
+    toUpdate.enter()
+      .call(appendHelper);
+
+    toUpdate.exit()
+      .call(removeHelper);
+
+    enter.selectAll(selector)
+      .data(dataFunc, keyFunc)
       .enter()
-      .append('polygon')
-      .classed('category', true)
-      .attr('points', centerPoints)
+      .call(appendHelper);
 
-    gsEnter.selectAll('circle.vertex')
-      .data(
-        function(d) { return d.values; },
-        function(d) { return d.polygon + '-' + d.axis; }
-      )
+    exit.selectAll(selector)
+      .call(removeHelper);
+  }
+
+  Radar.prototype._buildNestedPolygons = function(update, enter, exit) {
+    var vm = this,
+      duration = vm._config.transitionDuration,
+      selector = 'polygon.category',
+      toUpdate;
+
+    // Used for the transitions where the polygons expand from
+    // or shrink to the center.
+    function centerPoints(data) {
+      var center = [vm._center.x, vm._center.y].join(',')
+      return data.points.map(function(p) {
+        // All polygon's points move to the center.
+        return center;
+      }).join(' ');
+    }
+
+    function appendHelper(selection) {
+      selection
+        .append('polygon')
+        .attr('class', 'category')
+        .attr('points', centerPoints)
+        .style('stroke', function(d, i) { return d.color; })
+        .style('fill', function(d, i) { return d.color; })
+        .style('fill-opacity', 0.4)
+        .style('stroke-width', '1px')
+        .call(updateHelper);
+
+    }
+
+    function removeHelper(selection) {
+      selection
+        .transition()
+        .duration(duration)
+        .attr('points', centerPoints)
+        .remove();
+    }
+
+    function updateHelper(selection) {
+      selection
+        .transition()
+        .duration(duration)
+        .attr('points', function(d) { return d.points.join(' '); });
+    }
+
+    function dataFunc(d) { return [d] }
+
+    function keyFunc(d) { return d.polygon; }
+
+    toUpdate = update.selectAll(selector)
+      .data(dataFunc, keyFunc);
+
+    toUpdate
+      .call(updateHelper);
+
+    toUpdate.enter()
+      .call(appendHelper);
+
+    toUpdate.exit()
+      .call(removeHelper);
+
+    enter.selectAll(selector)
+      .data(dataFunc, keyFunc)
       .enter()
-      .append('circle')
-      .classed('vertex', true)
-      .attr('cx', vm._center.x)
-      .attr('cy', vm._center.y)
-      .transition()
-      .duration(duration)
-      .attr('cx', function(d) { return d.xy[0]; })
-      .attr('cy', function(d) { return d.xy[1]; })
-      .attr('r', 3)
-      .attr('fill', function(d) { return d.color; });
+      .call(appendHelper);
 
-    // Handle update and exit selection of the polygons.
+    exit.selectAll(selector)
+      .call(removeHelper);
 
-    polygonSelection = svg.selectAll('polygon.category')
-      .data(groupedData, function(d) { return d.polygon; });
-
-    polygonSelection
-      .transition()
-      .duration(duration)
-      .attr('points', function(d) { return d.points.join(' '); })
-      .style('stroke', function(d, i) { return d.color; })
-      .style('fill', function(d, i) { return d.color; })
-      .style('fill-opacity', 0.6)
-      .style('stroke-width', '1px');
-
-    polygonSelection.exit()
-      .transition()
-      .duration(duration)
-      .attr('points', centerPoints)
-      .remove();
-
-    // Handle update and exit selection of the vertexes.
-
-    vertexSelection = gs.selectAll('circle.vertex')
-      .data(
-        function(d) { return d.values; },
-        function(d) { return d.polygon + '-' + d.axis; }
-      );
-
-    vertexSelection
-      .transition()
-      .duration(duration)
-      .attr('cx', function(d) { return d.xy[0]; })
-      .attr('cy', function(d) { return d.xy[1]; });
-
-    vertexSelection.enter()
-      .append('circle')
-      .classed('vertex', true)
-      .attr('cx', vm._center.x)
-      .attr('cy', vm._center.y)
-      .transition()
-      .duration(duration)
-      .attr('cx', function(d) { return d.xy[0]; })
-      .attr('cy', function(d) { return d.xy[1]; })
-      .attr('r', 3)
-      .attr('fill', function(d) { return d.color; });
-
-    vertexSelection.exit()
-      .transition()
-      .duration(duration)
-      .attr('cx', vm._center.x)
-      .attr('cy', vm._center.y)
-      .remove();
   }
 
   Radar.prototype.xOf = function(rads, value) {
@@ -456,7 +482,6 @@ export default function(config) {
 
     vm.drawLevels();
     vm.drawAxes();
-    //vm.drawPoints();
     vm.drawPolygons();
   }
 
