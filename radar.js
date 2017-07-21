@@ -24,10 +24,12 @@ export default function(config) {
     vm._minMax = [0, 0];
     vm._viewData = [];
     vm._colorMap = [];
+    vm._ticks = 0;
+    vm._scale = null;
 
     // Set defaults.
-    if(!vm._config.levels) {
-      vm._config.levels = 5;
+    if(!vm._config.ticks) {
+      vm._config.ticks = 10;
     }
 
     if(!vm._config.transitionDuration) {
@@ -43,7 +45,6 @@ export default function(config) {
       vm._config.size.width / 2,
       vm._config.size.height / 2
     );
-    console.log(vm);
   }
 
   // User API.
@@ -66,9 +67,9 @@ export default function(config) {
     return vm;
   }
 
-  Radar.prototype.levels = function(levels) {
+  Radar.prototype.ticks = function(ticks) {
     var vm = this;
-    vm._config.levels = levels;
+    vm._config.ticks = ticks;
     return vm;
   }
 
@@ -85,25 +86,16 @@ export default function(config) {
 
   // Internal helpers.
 
-  Radar.prototype.drawLevels = function() {
+  Radar.prototype.drawTicks = function() {
     var vm = this,
-      svg = vm._chart._svg,
-      levelLength = vm._radius / vm._config.levels,
-      levels = [];
+      svg = vm._chart._svg;
 
-    for(var i = 0, lv = 0; i < vm._config.levels; i++) {
-      lv += levelLength;
-      levels.push(lv);
-    }
-
-    console.log(levels);
-
-    svg.selectAll('circle.level')
-      .data(levels)
+    svg.selectAll('circle.tick')
+      .data(vm._ticks)
       .enter()
       .append('circle')
-      .classed('level', true)
-      .attr('r', function(d) { return d; })
+      .classed('tick', true)
+      .attr('r', function(d, idx) { return vm._scale(d); })
       .attr('cx', function(d) { return vm._center.x })
       .attr('cy', function(d) { return vm._center.y })
       .style('fill', 'none')
@@ -398,7 +390,7 @@ export default function(config) {
   // Build the data with coords.
   Radar.prototype.dataForVisualization = function(data) {
     var vm = this,
-      scale = vm._scales.x,
+      scale = vm._scale,
       axisKey = vm._config.axesFrom,
       valKey = vm._config.valuesFrom,
       polygKey = vm._config.polygonsFrom,
@@ -447,21 +439,23 @@ export default function(config) {
     var vm = this;
     vm._scales = scales;
     // We only need one scale.
-    vm._scales.x.range([0, vm._radius]);
+    vm._scale = vm._scales.x;
+    vm._scale.range([0, vm._radius]);
     return vm;
   }
 
   Radar.prototype.axes = function(axes) {
     var vm = this;
     // TODO Do nothing?
-    //vm._axesData = axes;
     return vm;
   }
 
   Radar.prototype.domains = function() {
     var vm = this;
     vm._minMax = vm.minMax(vm._data);
-    vm._scales.x.domain(vm._minMax);
+    vm._scale.domain(vm._minMax);
+    vm._ticks = vm._scale.ticks(vm._config.ticks);
+    console.log('Ticks', vm._ticks);
     return vm;
   }
 
@@ -480,7 +474,7 @@ export default function(config) {
     vm._axesData = vm.extractAxes(data);
     vm._viewData = vm.dataForVisualization(data);
 
-    vm.drawLevels();
+    vm.drawTicks();
     vm.drawAxes();
     vm.drawPolygons();
   }
