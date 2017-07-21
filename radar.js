@@ -6,7 +6,7 @@ import * as d3 from 'd3';
 
 export default function(config) {
   function Radar(config) {
-    var vm = this;
+    var vm = this, size;
 
     vm.CIRCLE_RADIANS = 2 * Math.PI;
 
@@ -37,13 +37,16 @@ export default function(config) {
     }
 
     // Calculate basic data.
+    size = vm._config.size;
+
     vm._center = {
-      x: vm._config.size.width / 2,
-      y: vm._config.size.height / 2
+      x: (size.width / 2) - size.margin.left,
+      y: (size.height / 2) - size.margin.top
     };
+
     vm._radius = Math.min(
-      vm._config.size.width / 2,
-      vm._config.size.height / 2
+      (size.width - size.margin.left - size.margin.right) / 2,
+      (size.height - size.margin.top - size.margin.bottom) / 2
     );
   }
 
@@ -88,18 +91,73 @@ export default function(config) {
 
   Radar.prototype.drawTicks = function() {
     var vm = this,
-      svg = vm._chart._svg;
+      svg = vm._chart._svg,
+      dur = vm._config.transitionDuration,
+      sel;
 
-    svg.selectAll('circle.tick')
-      .data(vm._ticks)
-      .enter()
+    sel = svg.selectAll('circle.tick')
+      .data(vm._ticks);
+
+    sel
+      .transition()
+      .duration(dur)
+      .attr('r', function(d, idx) { return vm._scale(d); })
+
+    sel.enter()
       .append('circle')
       .classed('tick', true)
-      .attr('r', function(d, idx) { return vm._scale(d); })
       .attr('cx', function(d) { return vm._center.x })
       .attr('cy', function(d) { return vm._center.y })
       .style('fill', 'none')
-      .style('stroke', 'gray');
+      .style('stroke', 'gray')
+      .attr('r', function(d, idx) { return vm._scale(d); })
+      .attr('opacity', 0)
+      .transition()
+      .duration(dur)
+      .attr('opacity', 1);
+
+    sel.exit()
+      .transition()
+      .duration(dur)
+      .attr('opacity', 0)
+      .remove();
+  }
+
+
+  Radar.prototype.drawTickLabels = function() {
+    var vm = this,
+      svg = vm._chart._svg,
+      margin = 2,
+      dur = vm._config.transitionDuration,
+      sel;
+
+    sel = svg.selectAll('text.label')
+      .data(vm._ticks);
+
+    sel
+      .transition()
+      .duration(dur)
+      .text(function(d) { return d; })
+      .attr('y', function(d) { return vm._center.y - margin - vm._scale(d); });
+
+    sel.enter()
+      .append('text')
+      .text(function(d) { return d; })
+      .attr('class', 'label')
+      .attr('x', vm._center.x + margin)
+      .attr('y', function(d) { return vm._center.y - margin - vm._scale(d); })
+      .attr('fill', 'gray')
+      .style('font-family', 'sans-serif')
+      .attr('opacity', 0)
+      .transition()
+      .duration(dur)
+      .attr('opacity', 1);
+
+    sel.exit()
+      .transition()
+      .duration(dur)
+      .attr('opacity', 0)
+      .remove();
   }
 
   Radar.prototype.extractAxes = function(data) {
@@ -376,7 +434,7 @@ export default function(config) {
   Radar.prototype.minMax = function(data) {
     var vm = this;
     return data.reduce(function(minMax, row) {
-      var val = row[vm._config.valuesFrom];
+      var val = parseInt(row[vm._config.valuesFrom]);
       if(minMax.length == 0) {
         return [val, val]
       }
@@ -452,11 +510,21 @@ export default function(config) {
 
   Radar.prototype.domains = function() {
     var vm = this;
-    vm._minMax = vm.minMax(vm._data);
+    vm._calcDomains(vm._data);
+    return vm;
+  }
+
+  Radar.prototype._calcDomains = function(data) {
+    var vm = this;
+    vm._minMax = vm.minMax(data);
     vm._scale.domain(vm._minMax);
     vm._ticks = vm._scale.ticks(vm._config.ticks);
-    console.log('Ticks', vm._ticks);
-    return vm;
+    // Exclude 0 from ticks if it is the first element.
+    // We don't need to have the 0 actually rendered.
+    if(vm._ticks.length > 0 && vm._ticks[0] === 0) {
+      vm._ticks = vm._ticks.slice(1);
+    }
+    console.log('Ticks', vm._ticks, 'MinMax', vm._minMax);
   }
 
   Radar.prototype.draw = function() {
@@ -471,11 +539,13 @@ export default function(config) {
     if(typeof vm._filter === 'function') {
       data = data.filter(vm._filter);
     }
+    vm._calcDomains(data);
     vm._axesData = vm.extractAxes(data);
     vm._viewData = vm.dataForVisualization(data);
 
     vm.drawTicks();
     vm.drawAxes();
+    vm.drawTickLabels();
     vm.drawPolygons();
   }
 
