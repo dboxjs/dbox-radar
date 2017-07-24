@@ -1,0 +1,24 @@
+{
+  "name": "dbox-radar",
+  "version": "1.0.0",
+  "description": "A radar-chart layer for dbox",
+  "main": "radar.js",
+  "scripts": {
+    "test": "mocha --compilers js:babel-core/register"
+  },
+  "keywords": [
+    "d3",
+    "charts",
+    "dbox",
+    "radar"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-core": "^6.25.0",
+    "babel-preset-es2015": "^6.24.1",
+    "d3": "^4.10.0",
+    "mocha": "^3.4.2"
+  }
+}
