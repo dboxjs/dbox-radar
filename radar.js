@@ -11,8 +11,6 @@ export default function(config) {
     // The first axis must be at the circle's top.
     vm.RADIANS_TO_ROTATE = vm.CIRCLE_RADIANS / -4;
 
-    vm.DEFAULT_TRANSOTION_DURATION = 400;
-
     vm._config = config ? config : {};
     vm._data = [];
     vm._scales = {};
@@ -31,7 +29,11 @@ export default function(config) {
     }
 
     if(!vm._config.transitionDuration) {
-      vm._config.transitionDuration = vm.DEFAULT_TRANSOTION_DURATION;
+      vm._config.transitionDuration = 400;
+    }
+
+    if(!vm._config.axisLabelMargin) {
+      vm._config.axisLabelMargin = 24;
     }
 
     // Calculate basic data.
@@ -122,14 +124,14 @@ export default function(config) {
   };
 
 
-  Radar.prototype.drawTickLabels = function() {
+  Radar.prototype.drawTicksLabels = function() {
     var vm = this,
       svg = vm._chart._svg,
       margin = 2,
       dur = vm._config.transitionDuration,
       sel;
 
-    sel = svg.selectAll('text.label')
+    sel = svg.selectAll('text.tick-label')
       .data(vm._ticks);
 
     sel
@@ -141,7 +143,7 @@ export default function(config) {
     sel.enter()
       .append('text')
       .text(function(d) { return d; })
-      .attr('class', 'label')
+      .attr('class', 'tick-label')
       .attr('x', vm._center.x + margin)
       .attr('y', function(d) { return vm._center.y - margin - vm._scale(d); })
       .attr('fill', 'gray')
@@ -246,6 +248,43 @@ export default function(config) {
       .duration(duration)
       .attr('x2', vm._center.x)
       .attr('y2', vm._center.y)
+      .remove();
+  };
+
+  Radar.prototype.drawAxesLabels = function() {
+    var vm = this,
+      svg = vm._chart._svg,
+      duration = vm._config.transitionDuration,
+      fromCenter = vm._radius + vm._config.axisLabelMargin,
+      labels;
+
+    labels = svg.selectAll('text.axis-label')
+      .data(vm._axesData.list, function(d) { return d.axis; });
+
+    labels
+      .transition()
+      .duration(duration)
+      .attr('x', (d) => vm.xOf(d.rads, fromCenter))
+      .attr('y', (d) => vm.yOf(d.rads, fromCenter));
+
+    labels.enter()
+      .append('text')
+      .attr('class', 'axis-label')
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'gray')
+      .style('font-family', 'sans-serif')
+      .text(function(d) { return d.axis; })
+      .attr('x', (d) => vm.xOf(d.rads, fromCenter))
+      .attr('y', (d) => vm.yOf(d.rads, fromCenter))
+      .attr('opacity', 0)
+      .transition()
+      .duration(duration)
+      .attr('opacity', 1);
+
+    labels.exit()
+      .transition()
+      .duration(duration)
+      .attr('opacity', 0)
       .remove();
   };
 
@@ -541,7 +580,8 @@ export default function(config) {
 
     vm.drawTicks();
     vm.drawAxes();
-    vm.drawTickLabels();
+    vm.drawAxesLabels();
+    vm.drawTicksLabels();
     vm.drawPolygons();
   };
 
