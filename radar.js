@@ -2,8 +2,6 @@
  * Build a radar chart.
  */
 
-import * as d3 from 'd3';
-
 export default function(config) {
   function Radar(config) {
     var vm = this, size;
@@ -56,36 +54,36 @@ export default function(config) {
     var vm = this;
     vm._config.polygonsFrom = column;
     return vm;
-  }
+  };
 
   Radar.prototype.axesFrom = function(column) {
     var vm = this;
     vm._config.axesFrom = column;
     return vm;
-  }
+  };
 
   Radar.prototype.valuesFrom = function(column) {
     var vm = this;
     vm._config.valuesFrom = column;
     return vm;
-  }
+  };
 
   Radar.prototype.ticks = function(ticks) {
     var vm = this;
     vm._config.ticks = ticks;
     return vm;
-  }
+  };
 
   Radar.prototype.colors = function(colors) {
     var vm = this;
     vm._config.colors = colors;
     return vm;
-  }
+  };
 
   Radar.prototype.end = function() {
     var vm = this;
     return vm._chart;
-  }
+  };
 
   // Internal helpers.
 
@@ -101,16 +99,16 @@ export default function(config) {
     sel
       .transition()
       .duration(dur)
-      .attr('r', function(d, idx) { return vm._scale(d); })
+      .attr('r', function(d) { return vm._scale(d); });
 
     sel.enter()
       .append('circle')
       .classed('tick', true)
-      .attr('cx', function(d) { return vm._center.x })
-      .attr('cy', function(d) { return vm._center.y })
+      .attr('cx', vm._center.x)
+      .attr('cy', vm._center.y)
       .style('fill', 'none')
       .style('stroke', 'gray')
-      .attr('r', function(d, idx) { return vm._scale(d); })
+      .attr('r', function(d) { return vm._scale(d); })
       .attr('opacity', 0)
       .transition()
       .duration(dur)
@@ -121,7 +119,7 @@ export default function(config) {
       .duration(dur)
       .attr('opacity', 0)
       .remove();
-  }
+  };
 
 
   Radar.prototype.drawTickLabels = function() {
@@ -158,7 +156,7 @@ export default function(config) {
       .duration(dur)
       .attr('opacity', 0)
       .remove();
-  }
+  };
 
   Radar.prototype.extractAxes = function(data) {
     var result,
@@ -176,7 +174,7 @@ export default function(config) {
     radiansPerAxis = (vm.CIRCLE_RADIANS / result.length);
 
     result = result.map(
-      function(item, idx, arr) {
+      function(item, idx) {
         return {
           axis: item,
           rads: (idx * radiansPerAxis) + vm.RADIANS_TO_ROTATE
@@ -190,12 +188,12 @@ export default function(config) {
         return hashed;
       }, {})
     };
-  }
+  };
 
   Radar.prototype.buildColorMap = function(data) {
     var vm = this,
-      colros = vm._config.colors;
-    return data.reduce(function(cMap, row, idx) {
+      colors = vm._config.colors;
+    return data.reduce(function(cMap, row) {
       var polyg = row[vm._config.polygonsFrom],
         cIdx = cMap.index.indexOf(polyg);
 
@@ -205,7 +203,7 @@ export default function(config) {
       }
       return cMap;
     }, {index: [], hash: {}}).hash;
-  }
+  };
 
   Radar.prototype.drawAxes = function() {
     var vm = this,
@@ -213,7 +211,6 @@ export default function(config) {
       duration = vm._config.transitionDuration,
       selection;
 
-    console.log(vm._axesData);
     selection = svg.selectAll('line.axis')
       .data(vm._axesData.list, function(d) { return d.axis; });
 
@@ -227,20 +224,20 @@ export default function(config) {
       .attr('y2', vm._center.y)
       .transition()
       .duration(duration)
-      .attr('x2', function(d, i) {
+      .attr('x2', function(d) {
         return vm.xOf(d.rads, vm._radius + 8);
       })
-      .attr('y2', function(d, i) {
+      .attr('y2', function(d) {
         return vm.yOf(d.rads, vm._radius + 8);
       });
 
     selection
       .transition()
       .duration(duration)
-      .attr('x2', function(d, i) {
+      .attr('x2', function(d) {
         return vm.xOf(d.rads, vm._radius + 8);
       })
-      .attr('y2', function(d, i) {
+      .attr('y2', function(d) {
         return vm.yOf(d.rads, vm._radius + 8);
       });
 
@@ -250,18 +247,18 @@ export default function(config) {
       .attr('x2', vm._center.x)
       .attr('y2', vm._center.y)
       .remove();
-  }
+  };
 
   Radar.prototype.drawPolygons = function() {
     var vm = this,
       data = vm._viewData,
       svg = vm._chart._svg,
       duration = vm._config.transitionDuration,
-      groupedData, selection,
-      gs, gsExit, gsEnter;;
+      groupedData,
+      gs, gsExit, gsEnter;
 
     // Prepare the data.
-    groupedData = data.reduce(function(bundle, row, idx) {
+    groupedData = data.reduce(function(bundle, row) {
       var polygIdx = bundle.keys.indexOf(row.polygon);
       if(polygIdx == -1) {
         polygIdx = bundle.keys.push(row.polygon) - 1;
@@ -289,7 +286,7 @@ export default function(config) {
 
     vm._buildNestedVertexes(gs, gsEnter, gsExit);
     vm._buildNestedPolygons(gs, gsEnter, gsExit);
-  }
+  };
 
   Radar.prototype._buildNestedVertexes = function(update, enter, exit) {
     var vm = this,
@@ -349,7 +346,7 @@ export default function(config) {
 
     exit.selectAll(selector)
       .call(removeHelper);
-  }
+  };
 
   Radar.prototype._buildNestedPolygons = function(update, enter, exit) {
     var vm = this,
@@ -360,8 +357,8 @@ export default function(config) {
     // Used for the transitions where the polygons expand from
     // or shrink to the center.
     function centerPoints(data) {
-      var center = [vm._center.x, vm._center.y].join(',')
-      return data.points.map(function(p) {
+      var center = [vm._center.x, vm._center.y].join(',');
+      return data.points.map(function() {
         // All polygon's points move to the center.
         return center;
       }).join(' ');
@@ -372,8 +369,8 @@ export default function(config) {
         .append('polygon')
         .attr('class', 'category')
         .attr('points', centerPoints)
-        .style('stroke', function(d, i) { return d.color; })
-        .style('fill', function(d, i) { return d.color; })
+        .style('stroke', function(d) { return d.color; })
+        .style('fill', function(d) { return d.color; })
         .style('fill-opacity', 0.4)
         .style('stroke-width', '1px')
         .call(updateHelper);
@@ -395,7 +392,7 @@ export default function(config) {
         .attr('points', function(d) { return d.points.join(' '); });
     }
 
-    function dataFunc(d) { return [d] }
+    function dataFunc(d) { return [d]; }
 
     function keyFunc(d) { return d.polygon; }
 
@@ -419,31 +416,31 @@ export default function(config) {
     exit.selectAll(selector)
       .call(removeHelper);
 
-  }
+  };
 
   Radar.prototype.xOf = function(rads, value) {
     var vm = this;
     return vm._center.x + (value * Math.cos(rads));
-  }
+  };
 
   Radar.prototype.yOf = function(rads, value) {
     var vm = this;
     return vm._center.y + (value * Math.sin(rads));
-  }
+  };
 
   Radar.prototype.minMax = function(data) {
     var vm = this;
     return data.reduce(function(minMax, row) {
       var val = parseInt(row[vm._config.valuesFrom]);
       if(minMax.length == 0) {
-        return [val, val]
+        return [val, val];
       }
       return [
         val < minMax[0] ? val : minMax[0],
         val > minMax[1] ? val : minMax[1]
       ];
     }, []);
-  }
+  };
 
   // Build the data with coords.
   Radar.prototype.dataForVisualization = function(data) {
@@ -471,13 +468,13 @@ export default function(config) {
         rawData: row
       };
     });
-  }
+  };
 
   Radar.prototype.filter = function(fun) {
     var vm = this;
     vm._filter = fun;
     return vm;
-  }
+  };
 
   // DBOX internals.
 
@@ -485,13 +482,13 @@ export default function(config) {
     var vm = this;
     vm._chart = chart;
     return vm;
-  }
+  };
 
   Radar.prototype.data = function(data) {
-    var vm = this, dataBundle;
+    var vm = this;
     vm._data = data;
     return vm;
-  }
+  };
 
   Radar.prototype.scales = function(scales) {
     var vm = this;
@@ -500,19 +497,19 @@ export default function(config) {
     vm._scale = vm._scales.x;
     vm._scale.range([0, vm._radius]);
     return vm;
-  }
+  };
 
   Radar.prototype.axes = function(axes) {
     var vm = this;
     // TODO Do nothing?
     return vm;
-  }
+  };
 
   Radar.prototype.domains = function() {
     var vm = this;
     vm._calcDomains(vm._data);
     return vm;
-  }
+  };
 
   Radar.prototype._calcDomains = function(data) {
     var vm = this;
@@ -524,8 +521,7 @@ export default function(config) {
     if(vm._ticks.length > 0 && vm._ticks[0] === 0) {
       vm._ticks = vm._ticks.slice(1);
     }
-    console.log('Ticks', vm._ticks, 'MinMax', vm._minMax);
-  }
+  };
 
   Radar.prototype.draw = function() {
     var vm = this,
@@ -547,7 +543,7 @@ export default function(config) {
     vm.drawAxes();
     vm.drawTickLabels();
     vm.drawPolygons();
-  }
+  };
 
   return new Radar(config);
 

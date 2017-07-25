@@ -2,8 +2,7 @@ import radar from '../';
 import * as assert from 'assert';
 
 describe('radar', () => {
-  var conf, data;
-var radarLayer;
+  var conf, data, radarLayer;
 
 
   before(() => {
@@ -100,5 +99,5 @@ var radarLayer;
       axes = radarLayer.extractAxes(data).list.map((it) => it.rads);
       assert.deepEqual(expected.sort(), axes.sort());
     });
-  })
+  });
 });
