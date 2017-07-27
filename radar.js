@@ -19,7 +19,7 @@ export default function(config) {
     vm._filter = null;
     vm._minMax = [0, 0];
     vm._viewData = [];
-    vm._colorMap = [];
+    vm._colorMap = {};
     vm._ticks = 0;
     vm._scale = null;
 
@@ -34,6 +34,19 @@ export default function(config) {
 
     if(!vm._config.axisLabelMargin) {
       vm._config.axisLabelMargin = 24;
+    }
+
+    if(!vm._config.legend) {
+      vm._config.legend = {
+        enable: true
+      };
+    }
+
+    if(!vm._config.legend.at) {
+      vm._config.legend.at = {
+        x: 20,
+        y: 20
+      };
     }
 
     // Calculate basic data.
@@ -202,9 +215,10 @@ export default function(config) {
       if(cIdx == -1) {
         cIdx = cMap.index.push(polyg) - 1;
         cMap.hash[polyg] = colors[cIdx];
+        cMap.list.push({polygon: polyg, color: colors[cIdx]});
       }
       return cMap;
-    }, {index: [], hash: {}}).hash;
+    }, {index: [], hash: {}, list: []});
   };
 
   Radar.prototype.drawAxes = function() {
@@ -457,6 +471,38 @@ export default function(config) {
 
   };
 
+  Radar.prototype.drawLegend = function() {
+    var vm = this,
+      cMap = vm._colorMap.list,
+      svg = vm._chart._svg,
+      at = vm._config.legend.at,
+      side = 14,
+      margin = 4,
+      legend, newLegend;
+
+    legend = svg.selectAll('g.legend-item')
+      .data(cMap, function(d) { return d.polygon; });
+
+    newLegend = legend.enter()
+      .append('g')
+      .attr('class', 'legend-item');
+
+    newLegend
+      .append('text')
+      .text(d => d.polygon)
+      .attr('x', at.x + side + margin)
+      .attr('y', (d, i) => ((side + margin) * i) + at.y + side)
+      .style('font-family', 'sans-serif');
+
+    newLegend
+      .append('rect')
+      .attr('fill', d => d.color)
+      .attr('width', side)
+      .attr('height', side)
+      .attr('x', at.x)
+      .attr('y', (d, i) => ((side + margin) * i) + at.y);
+  };
+
   Radar.prototype.xOf = function(rads, value) {
     var vm = this;
     return vm._center.x + (value * Math.cos(rads));
@@ -503,7 +549,7 @@ export default function(config) {
         value: val,
         polygon: polygon,
         axis: axis,
-        color: vm._colorMap[polygon],
+        color: vm._colorMap.hash[polygon],
         rawData: row
       };
     });
@@ -583,6 +629,7 @@ export default function(config) {
     vm.drawAxesLabels();
     vm.drawTicksLabels();
     vm.drawPolygons();
+    vm.drawLegend();
   };
 
   return new Radar(config);
