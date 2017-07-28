@@ -17,7 +17,8 @@ describe('radar', () => {
           bottom: 40,
         }
       },
-      valuesFrom: 'value'
+      valuesFrom: 'value',
+      polygonsFrom: 'cat',
     };
 
     data = [
@@ -78,7 +79,7 @@ describe('radar', () => {
       assert.deepEqual(['a', 'zz', '1', '001'], axes);
     });
 
-    it('should make a correct radians calculation', () => {
+    it('should correctly calculate the radians of each axis', () => {
       var axes, axRads = 2 * Math.PI / 4,
         rotated = radarLayer.RADIANS_TO_ROTATE,
         // Generate 4 axes.
@@ -98,6 +99,77 @@ describe('radar', () => {
       radarLayer.axesFrom('ax');
       axes = radarLayer.extractAxes(data).list.map((it) => it.rads);
       assert.deepEqual(expected.sort(), axes.sort());
+    });
+  });
+
+  describe('buildColorMap()', function() {
+    it('should build an object with a hash and list properties', function() {
+      var data = [
+          {cat: 'one'},
+          {cat: 'two'},
+          {cat: 'three'}
+        ],
+        colors = ['red', 'blue', 'green'],
+        keys;
+
+      radarLayer.colors(colors);
+      keys = Object.keys(radarLayer.buildColorMap(data));
+
+      assert.ok(keys.indexOf('list') > -1);
+      assert.ok(keys.indexOf('hash') > -1);
+    });
+
+    it('should map the colors to categories in order', function() {
+      var data = [
+          {cat: 'one'},
+          {cat: 'two'},
+          {cat: 'one'},
+          {cat: 'three'},
+          {cat: 'two'}
+        ],
+        colors = ['red', 'blue', 'green'],
+        map;
+
+      radarLayer.colors(colors);
+      map = radarLayer.buildColorMap(data).hash;
+
+      assert.equal('red', map.one);
+      assert.equal('blue', map.two);
+      assert.equal('green', map.three);
+    });
+
+    it('should map only once each category to a color', function() {
+      var data = [
+          {cat: 'one'},
+          {cat: 'two'},
+          {cat: 'one'},
+          {cat: 'three'},
+          {cat: 'two'},
+          {cat: 'four'},
+          {cat: 'four'},
+          {cat: 'five'},
+        ],
+        colors = ['red', 'blue', 'green', 'gray', 'yellow'],
+        listMap;
+
+      radarLayer.colors(colors);
+      listMap = radarLayer.buildColorMap(data).list;
+
+      assert.equal(5, listMap.length);
+    });
+
+    it('soud add a polygon and color properties to the list', function() {
+      var data = [
+          {cat: 'one'},
+        ],
+        colors = ['red', 'blue', 'green'],
+        listMap;
+
+      radarLayer.colors(colors);
+      listMap = radarLayer.buildColorMap(data).list;
+
+      assert.ok(Object.keys(listMap[0]).indexOf('polygon') > -1);
+      assert.ok(Object.keys(listMap[0]).indexOf('color') > -1);
     });
   });
 });
