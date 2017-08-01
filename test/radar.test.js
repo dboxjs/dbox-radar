@@ -172,4 +172,16 @@ describe('radar', () => {
       assert.ok(Object.keys(listMap[0]).indexOf('color') > -1);
     });
   });
+
+  describe('_toggleList()', function() {
+    it('should append-missing/remove-existing items in array', function() {
+      var stuff = ['a', 'b', 'c'];
+
+      stuff = radarLayer._toggleList(stuff, ['b', 'n']);
+      assert.deepEqual(['a', 'c', 'n'], stuff);
+
+      stuff = radarLayer._toggleList(stuff, ['a', 'b', 'n']);
+      assert.deepEqual(['c', 'b'], stuff);
+    });
+  });
 });

@@ -22,6 +22,7 @@ export default function(config) {
     vm._colorMap = {};
     vm._ticks = 0;
     vm._scale = null;
+    vm._excludedPolygons = [];
 
     // Set defaults.
     if(!vm._config.ticks) {
@@ -481,10 +482,18 @@ export default function(config) {
       legend, newLegend;
 
     legend = svg.selectAll('g.legend-item')
-      .data(cMap, function(d) { return d.polygon; });
+      .data(cMap, function(d) { return d.polygon; })
+      .attr('opacity', d => {
+        return vm._excludedPolygons.indexOf(d.polygon) > -1 ? .4 : 1;
+      });
 
     newLegend = legend.enter()
       .append('g')
+      .on('click', (d) => {
+        vm._excludedPolygons = vm._toggleList(
+          vm._excludedPolygons, [d.polygon]);
+        vm.draw();
+      })
       .attr('class', 'legend-item');
 
     newLegend
@@ -501,6 +510,17 @@ export default function(config) {
       .attr('height', side)
       .attr('x', at.x)
       .attr('y', (d, i) => ((side + margin) * i) + at.y);
+  };
+
+  /**
+   * Append items not present in base from items and pop those which are.
+   * @param  {array} base   Array to append to remove from.
+   * @param  {array} items  Items to be toogled (appended or removed).
+   * @return {array}        A new array.
+   */
+  Radar.prototype._toggleList = (base, items) => {
+    var newItems = items.filter(it => base.indexOf(it) == -1);
+    return base.filter(it => items.indexOf(it) == -1).concat(newItems);
   };
 
   Radar.prototype.xOf = function(rads, value) {
@@ -617,9 +637,19 @@ export default function(config) {
     // polygons) have been filtered out.
     vm._colorMap = vm.buildColorMap(data);
 
+    // Apply the filter function, if it's present.
     if(typeof vm._filter === 'function') {
       data = data.filter(vm._filter);
     }
+
+    // Filter out excluded polygons from.
+    if(vm._excludedPolygons.length > 0) {
+      data = data.filter(it => {
+        return vm._excludedPolygons.indexOf(
+          it[vm._config.polygonsFrom]) == -1;
+      });
+    }
+
     vm._calcDomains(data);
     vm._axesData = vm.extractAxes(data);
     vm._viewData = vm.dataForVisualization(data);
