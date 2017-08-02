@@ -137,7 +137,6 @@ export default function(config) {
       .remove();
   };
 
-
   Radar.prototype.drawTicksLabels = function() {
     var vm = this,
       svg = vm._chart._svg,
@@ -338,14 +337,15 @@ export default function(config) {
     gsExit = gs.exit();
     gsExit.transition().duration(duration).remove();
 
-    vm._buildNestedVertexes(gs, gsEnter, gsExit);
     vm._buildNestedPolygons(gs, gsEnter, gsExit);
+    vm._buildNestedVertexes(gs, gsEnter, gsExit);
   };
 
   Radar.prototype._buildNestedVertexes = function(update, enter, exit) {
     var vm = this,
       duration = vm._config.transitionDuration,
       selector = 'circle.vertex',
+      svg = vm._chart._svg,
       toUpdate;
 
     function appendHelper(selection) {
@@ -356,7 +356,29 @@ export default function(config) {
         .attr('cy', vm._center.y)
         .attr('r', 4)
         .attr('fill', function(d) { return d.color; })
-        .call(updateHelper);
+        .call(updateHelper)
+        .on('mouseover', d => {
+          var tt = svg.append('g')
+            .attr('class', 'tooltip')
+            .attr('opacity', 1);
+
+          tt.append('text')
+            .text(`${d.polygon} - ${d.axis} - ${d.value}`)
+            .attr('x', d.xy[0] + 4)
+            .attr('y', d.xy[1] - 10)
+            .style('font-family', 'sans-serif');
+
+          tt.transition()
+            .duration(200)
+            .attr('opacity', 1);
+        })
+        .on('mouseout', () => {
+          svg.selectAll('g.tooltip')
+            .transition()
+            .duration(200)
+            .attr('opacity', 0)
+            .remove();
+        });
 
     }
 
@@ -560,11 +582,12 @@ export default function(config) {
       var axis = row[axisKey],
         rads = axesHash[axis].rads,
         polygon = row[polygKey],
-        val = scale(row[valKey]);
+        val = row[valKey],
+        scVal = scale(val);
       return {
         xy: [
-          vm.xOf(rads, val),
-          vm.yOf(rads, val)
+          vm.xOf(rads, scVal),
+          vm.yOf(rads, scVal)
         ],
         value: val,
         polygon: polygon,
