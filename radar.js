@@ -358,18 +358,22 @@ export default function(config) {
         .attr('fill', d => d.color)
         .call(updateHelper)
         .on('mouseover', d => {
-          var tt, subtt,
+          var tt, subtt, bg, bbox,
+            padding = 2,
             x = d.xy[0] + 10,
             y = d.xy[1] - 10;
 
           tt = svg.append('g')
             .attr('class', 'tooltip')
-            .attr('opacity', 1);
+            .attr('opacity', 0);
+
+          bg = tt.append('rect');
 
           subtt = tt
             .append('text')
             .attr('y', y)
             .attr('x', x)
+            .attr('fill', 'white')
             .style('font-family', 'sans-serif');
 
           subtt.append('tspan')
@@ -380,9 +384,17 @@ export default function(config) {
             .attr('x', x)
             .text(d.polygon);
 
+          bbox = tt.node().getBBox();
+
+          bg.attr('x', bbox.x - padding)
+            .attr('y', bbox.y - padding)
+            .attr('width', bbox.width + (padding * 2))
+            .attr('height', bbox.height + (padding + 2))
+            .style('fill', 'gray');
+
           tt.transition()
             .duration(200)
-            .attr('opacity', 1);
+            .attr('opacity', .9);
         })
         .on('mouseout', () => {
           svg.selectAll('g.tooltip')
