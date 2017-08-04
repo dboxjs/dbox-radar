@@ -355,18 +355,30 @@ export default function(config) {
         .attr('cx', vm._center.x)
         .attr('cy', vm._center.y)
         .attr('r', 4)
-        .attr('fill', function(d) { return d.color; })
+        .attr('fill', d => d.color)
         .call(updateHelper)
         .on('mouseover', d => {
-          var tt = svg.append('g')
+          var tt, subtt,
+            x = d.xy[0] + 10,
+            y = d.xy[1] - 10;
+
+          tt = svg.append('g')
             .attr('class', 'tooltip')
             .attr('opacity', 1);
 
-          tt.append('text')
-            .text(`${d.polygon} - ${d.axis} - ${d.value}`)
-            .attr('x', d.xy[0] + 4)
-            .attr('y', d.xy[1] - 10)
+          subtt = tt
+            .append('text')
+            .attr('y', y)
+            .attr('x', x)
             .style('font-family', 'sans-serif');
+
+          subtt.append('tspan')
+            .text(d.value);
+
+          subtt.append('tspan')
+            .attr('dy', '-1.2em')
+            .attr('x', x)
+            .text(d.polygon);
 
           tt.transition()
             .duration(200)
