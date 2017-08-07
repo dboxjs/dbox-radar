@@ -687,7 +687,7 @@ export default function(config) {
   Radar.prototype._calcDomains = function(data) {
     var vm = this;
     vm._minMax = vm.minMax(data);
-    vm._scale.domain(vm._minMax);
+    vm._scale.domain([0, vm._minMax[1]]);
     vm._ticks = vm._scale.ticks(vm._config.ticks);
     // Exclude 0 from ticks if it is the first element.
     // We don't need to have the 0 actually rendered.
