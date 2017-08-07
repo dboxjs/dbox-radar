@@ -345,7 +345,6 @@ export default function(config) {
     var vm = this,
       duration = vm._config.transitionDuration,
       selector = 'circle.vertex',
-      svg = vm._chart._svg,
       toUpdate;
 
     function appendHelper(selection) {
@@ -358,52 +357,13 @@ export default function(config) {
         .attr('fill', d => d.color)
         .call(updateHelper)
         .on('mouseover', d => {
-          var tt, subtt, bg, bbox,
-            padding = 2,
-            x = d.xy[0] + 10,
+          var x = d.xy[0] + 10,
             y = d.xy[1] - 10;
-
-          tt = svg.append('g')
-            .attr('class', 'tooltip')
-            .attr('opacity', 0);
-
-          bg = tt.append('rect');
-
-          subtt = tt
-            .append('text')
-            .attr('y', y)
-            .attr('x', x)
-            .attr('fill', 'white')
-            .style('font-family', 'sans-serif');
-
-          subtt.append('tspan')
-            .text(d.value);
-
-          subtt.append('tspan')
-            .attr('dy', '-1.2em')
-            .attr('x', x)
-            .text(d.polygon);
-
-          bbox = tt.node().getBBox();
-
-          bg.attr('x', bbox.x - padding)
-            .attr('y', bbox.y - padding)
-            .attr('width', bbox.width + (padding * 2))
-            .attr('height', bbox.height + (padding + 2))
-            .style('fill', 'gray');
-
-          tt.transition()
-            .duration(200)
-            .attr('opacity', .9);
+          vm._showTooltip(x, y, d.polygon, d.value);
         })
         .on('mouseout', () => {
-          svg.selectAll('g.tooltip')
-            .transition()
-            .duration(200)
-            .attr('opacity', 0)
-            .remove();
+          vm._hideTooltip();
         });
-
     }
 
     function removeHelper(selection) {
@@ -446,6 +406,67 @@ export default function(config) {
 
     exit.selectAll(selector)
       .call(removeHelper);
+  };
+
+  /**
+   * Draw a tooltip at the given X, Y possition.
+   * @param  {int} x       The X coordinate
+   * @param  {int} y       The Y coordinate
+   * @param  {string} val1 The value to show as the first line
+   * @param  {string} val2 The value to show in the second line
+   * @return {selection}   Return the created tooltip as a D3 selection
+   */
+  Radar.prototype._showTooltip = function(x, y, val1, val2) {
+    var tt, subtt, bg, bbox,
+      padding = 2,
+      svg = this._chart._svg;
+
+    tt = svg.append('g')
+      .attr('class', 'tooltip')
+      .attr('opacity', 0);
+
+    bg = tt.append('rect');
+
+    subtt = tt
+      .append('text')
+      .attr('y', y)
+      .attr('x', x)
+      .attr('fill', 'white')
+      .style('font-family', 'sans-serif');
+
+    subtt.append('tspan')
+      .text(val2);
+
+    subtt.append('tspan')
+      .attr('dy', '-1.2em')
+      .attr('x', x)
+      .text(val1);
+
+    bbox = tt.node().getBBox();
+
+    bg.attr('x', bbox.x - padding)
+      .attr('y', bbox.y - padding)
+      .attr('width', bbox.width + (padding * 2))
+      .attr('height', bbox.height + (padding + 2))
+      .style('fill', 'gray');
+
+    tt.transition()
+      .duration(200)
+      .attr('opacity', .9);
+
+    return tt;
+  };
+
+  /**
+   * Remove the tooltip created by _showTooltip()
+   * @return {undefined}
+   */
+  Radar.prototype._hideTooltip = function() {
+    this._chart._svg.selectAll('g.tooltip')
+      .transition()
+      .duration(200)
+      .attr('opacity', 0)
+      .remove();
   };
 
   Radar.prototype._buildNestedPolygons = function(update, enter, exit) {
