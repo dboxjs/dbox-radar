@@ -126,3 +126,30 @@ Duration in milliseconds of the transitions of this chart. I you `filter()` then
 Default: `24`
 
 How far each label will be from it's axis.
+
+### defaultStyles
+
+Default: `true`
+
+Determine whether to use the default styling in the chart. If set to `false`, this setting will disable almost all the chart's predefined styles.
+
+## Style
+
+**dbox-radar** defines as few styles as possible, so you can manipulate the aspect of the chart in a bunch of aspects. However, some styles such as the stroke color of the axes and ticks, or the font family of every text is written directly to the SVG elements in the chart. The good news is that you can deactivate these defaults by passing the [`defaultStyles`](#defaultstyles) configuration.
+
+Use the following selectors to manipulate the style of the chart:
+
+Selector|Description
+--------|-----------
+`circle.tick`|The circular levels of the radar
+`line.axis`|The axes of the radar
+`text.axis-label`|The labels of the axes
+`text.tick-label`|The labels the ticks
+`circle.vertex`|The vertexes of the polygons in the chart
+`polygon.category`|The polygons in the chart
+`rect.tooltip-background`|The `rect` which acts as background for the tooltip
+`g.tooltip`|The tooltip container
+`g.legend-item`|The legend of the chart (one for each polygon)
+`g.polygon-container`|Each polygon and its vertexes are contained in an element like this
+`g.ticks-labels`|Ticks' labels are grouped in this single element
+`g.ticks`|Thicks circles are contained in this single element
