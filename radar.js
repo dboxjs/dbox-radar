@@ -50,6 +50,10 @@ export default function(config) {
       };
     }
 
+    if('undefined' == typeof vm._config.styleDefaults) {
+      vm._config.styleDefaults = true;
+    }
+
     // Calculate basic data.
     size = vm._config.size;
 
@@ -109,22 +113,34 @@ export default function(config) {
       dur = vm._config.transitionDuration,
       sel;
 
-    sel = svg.selectAll('circle.tick')
-      .data(vm._ticks);
+    sel = svg.select('g.ticks');
+
+    if(sel.empty()) {
+      sel = svg.append('g').attr('class', 'ticks');
+    }
+
+    sel = sel.selectAll('circle.tick')
+      .data(
+        // Add an explicit index for keying the chart with their original array
+        // indexes, then reverse it so rendering occurs from bigger to smaller
+        // circles, allowing to set a fill color to the concentric cirlces
+        // without getting the more external cirlce capping all the others.
+        vm._ticks.map((val, idx) => [idx, val]).reverse(),
+        d => d[0]);
 
     sel
       .transition()
       .duration(dur)
-      .attr('r', function(d) { return vm._scale(d); });
+      .attr('r', function(d) { return vm._scale(d[1]); });
 
     sel.enter()
       .append('circle')
       .classed('tick', true)
       .attr('cx', vm._center.x)
       .attr('cy', vm._center.y)
-      .style('fill', 'none')
-      .style('stroke', 'gray')
-      .attr('r', function(d) { return vm._scale(d); })
+      .style('fill', vm._ifStyleDefaults('none'))
+      .style('stroke', vm._ifStyleDefaults('gray'))
+      .attr('r', function(d) { return vm._scale(d[1]); })
       .attr('opacity', 0)
       .transition()
       .duration(dur)
@@ -144,7 +160,13 @@ export default function(config) {
       dur = vm._config.transitionDuration,
       sel;
 
-    sel = svg.selectAll('text.tick-label')
+    sel = svg.select('g.ticks-labels');
+
+    if(sel.empty()) {
+      sel = svg.append('g').attr('class', 'ticks-labels');
+    }
+
+    sel = sel.selectAll('text.tick-label')
       .data(vm._ticks);
 
     sel
@@ -159,8 +181,8 @@ export default function(config) {
       .attr('class', 'tick-label')
       .attr('x', vm._center.x + margin)
       .attr('y', function(d) { return vm._center.y - margin - vm._scale(d); })
-      .attr('fill', 'gray')
-      .style('font-family', 'sans-serif')
+      .attr('fill', vm._ifStyleDefaults('gray'))
+      .style('font-family', vm._ifStyleDefaults('sans-serif'))
       .attr('opacity', 0)
       .transition()
       .duration(dur)
@@ -235,7 +257,7 @@ export default function(config) {
       .classed('axis', true)
       .attr('x1', vm._center.x)
       .attr('y1', vm._center.y)
-      .style('stroke', 'gray')
+      .style('stroke', vm._ifStyleDefaults('gray'))
       .attr('x2', vm._center.x)
       .attr('y2', vm._center.y)
       .transition()
@@ -285,8 +307,8 @@ export default function(config) {
       .append('text')
       .attr('class', 'axis-label')
       .attr('text-anchor', 'middle')
-      .attr('fill', 'gray')
-      .style('font-family', 'sans-serif')
+      .attr('fill', vm._ifStyleDefaults('gray'))
+      .style('font-family', vm._ifStyleDefaults('sans-serif'))
       .text(function(d) { return d.axis; })
       .attr('x', (d) => vm.xOf(d.rads, fromCenter))
       .attr('y', (d) => vm.yOf(d.rads, fromCenter))
@@ -419,20 +441,21 @@ export default function(config) {
   Radar.prototype._showTooltip = function(x, y, val1, val2) {
     var tt, subtt, bg, bbox,
       padding = 2,
-      svg = this._chart._svg;
+      vm = this,
+      svg = vm._chart._svg;
 
     tt = svg.append('g')
       .attr('class', 'tooltip')
       .attr('opacity', 0);
 
-    bg = tt.append('rect');
+    bg = tt.append('rect').attr('class', 'tooltip-background');
 
     subtt = tt
       .append('text')
       .attr('y', y)
       .attr('x', x)
-      .attr('fill', 'white')
-      .style('font-family', 'sans-serif');
+      .style('fill', vm._ifStyleDefaults('white'))
+      .style('font-family', vm._ifStyleDefaults('sans-serif'));
 
     subtt.append('tspan')
       .text(val2);
@@ -448,7 +471,7 @@ export default function(config) {
       .attr('y', bbox.y - padding)
       .attr('width', bbox.width + (padding * 2))
       .attr('height', bbox.height + (padding + 2))
-      .style('fill', 'gray');
+      .style('fill', vm._ifStyleDefaults('gray'));
 
     tt.transition()
       .duration(200)
@@ -493,9 +516,8 @@ export default function(config) {
         .style('stroke', function(d) { return d.color; })
         .style('fill', function(d) { return d.color; })
         .style('fill-opacity', 0.4)
-        .style('stroke-width', '1px')
+        .style('stroke-width', vm._ifStyleDefaults('1px'))
         .call(updateHelper);
-
     }
 
     function removeHelper(selection) {
@@ -568,7 +590,7 @@ export default function(config) {
       .text(d => d.polygon)
       .attr('x', at.x + side + margin)
       .attr('y', (d, i) => ((side + margin) * i) + at.y + side)
-      .style('font-family', 'sans-serif');
+      .style('font-family', vm._ifStyleDefaults('sans-serif'));
 
     newLegend
       .append('rect')
@@ -577,6 +599,15 @@ export default function(config) {
       .attr('height', side)
       .attr('x', at.x)
       .attr('y', (d, i) => ((side + margin) * i) + at.y);
+  };
+
+  /**
+   * Return value if config styleDefaults is true, else null.
+   * @param  {string} value The value to use as default
+   * @return {string}       The value itself or null
+   */
+  Radar.prototype._ifStyleDefaults = function(value) {
+    return this._config.styleDefaults ? value : null;
   };
 
   /**
