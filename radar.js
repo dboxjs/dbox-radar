@@ -177,7 +177,7 @@ export default function(config) {
 
     sel.enter()
       .append('text')
-      .text(function(d) { return d; })
+      .text(function(d) { return d.toFixed(1); })
       .attr('class', 'tick-label')
       .attr('x', vm._center.x + margin)
       .attr('y', function(d) { return vm._center.y - margin - vm._scale(d); })
@@ -325,6 +325,8 @@ export default function(config) {
   };
 
   Radar.prototype.drawPolygons = function() {
+
+
     var vm = this,
       data = vm._viewData,
       svg = vm._chart._svg,
@@ -341,7 +343,8 @@ export default function(config) {
           polygon: row.polygon,
           color: row.color,
           points: [],
-          values: []
+          values: [],
+          rawData:row.rawData,
         });
       }
       bundle.polygons[polygIdx].values.push(row);
@@ -349,12 +352,17 @@ export default function(config) {
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
+   
     gs = svg.selectAll('g.polygon-container')
       .data(groupedData, function(d) { return d.polygon + '-container'; });
 
     gsEnter = gs.enter()
       .append('g')
-      .attr('class', 'polygon-container');
+      .attr('class', 'polygon-container')
+      .attr('id', function(d) {
+        var x= d;
+        return 'radar-id-'+d.rawData.CVE_ENT
+      })
 
     gsExit = gs.exit();
     gsExit.transition().duration(duration).remove();
@@ -458,7 +466,7 @@ export default function(config) {
       .style('font-family', vm._ifStyleDefaults('sans-serif'));
 
     subtt.append('tspan')
-      .text(val2);
+      .text(Number(val2).toFixed(1));
 
     subtt.append('tspan')
       .attr('dy', '-1.2em')
@@ -690,6 +698,11 @@ export default function(config) {
 
   Radar.prototype.data = function(data) {
     var vm = this;
+    //In case we want to filter observations
+    if(vm._config.data.filter){
+      data = data.filter(vm._config.data.filter);
+    }
+
     vm._data = data;
     return vm;
   };
