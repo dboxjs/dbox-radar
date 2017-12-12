@@ -165,7 +165,7 @@ export default function(config) {
     if(sel.empty()) {
       sel = svg.append('g').attr('class', 'ticks-labels');
     }
-
+    
     sel = sel.selectAll('text.tick-label')
       .data(vm._ticks);
 
@@ -292,7 +292,36 @@ export default function(config) {
       svg = vm._chart._svg,
       duration = vm._config.transitionDuration,
       fromCenter = vm._radius + vm._config.axisLabelMargin,
-      labels;
+      labels,
+      rects; 
+    
+      
+ 
+    
+    rects = svg.selectAll('rect.axis-label')
+      .data(vm._axesData.list, function(d) { return d.axis; });
+
+    rects.enter()
+      .append('rect')
+      .attr('class', 'axis-label')
+      .attr('x', (d) => vm.xOf(d.rads, fromCenter) - 50)
+      .attr('y', (d) => vm.yOf(d.rads, fromCenter) - 20)
+      .attr('rx', '5px')
+      .attr('ry', '5px')
+      .attr('width', '100px')
+      .attr('height', '40px')
+      .attr('fill', '#A3A3AF')
+      .attr('opacity', 0)
+      .transition()
+      .duration(duration)
+      .attr('opacity', 1);
+
+    rects.exit()
+      .transition()
+      .duration(duration)
+      .attr('opacity', 0)
+      .remove();
+
 
     labels = svg.selectAll('text.axis-label')
       .data(vm._axesData.list, function(d) { return d.axis; });
@@ -300,18 +329,18 @@ export default function(config) {
     labels
       .transition()
       .duration(duration)
-      .attr('x', (d) => vm.xOf(d.rads, fromCenter))
-      .attr('y', (d) => vm.yOf(d.rads, fromCenter));
+      .attr('x', (d) => vm.xOf(d.rads, fromCenter+5))
+      .attr('y', (d) => vm.yOf(d.rads, fromCenter+5));
 
     labels.enter()
       .append('text')
       .attr('class', 'axis-label')
       .attr('text-anchor', 'middle')
-      .attr('fill', vm._ifStyleDefaults('gray'))
+      .attr('fill', 'white')//vm._ifStyleDefaults('gray'))
       .style('font-family', vm._ifStyleDefaults('sans-serif'))
       .text(function(d) { return d.axis; })
-      .attr('x', (d) => vm.xOf(d.rads, fromCenter))
-      .attr('y', (d) => vm.yOf(d.rads, fromCenter))
+      .attr('x', (d) => vm.xOf(d.rads, fromCenter+5))
+      .attr('y', (d) => vm.yOf(d.rads, fromCenter+5))
       .attr('opacity', 0)
       .transition()
       .duration(duration)
