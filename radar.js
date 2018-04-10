@@ -1,7 +1,8 @@
+import * as d3 from 'd3'
+
 /*
  * Build a radar chart.
  */
-
 export default function(config) {
   function Radar(config) {
     var vm = this, size;
@@ -165,7 +166,7 @@ export default function(config) {
     if(sel.empty()) {
       sel = svg.append('g').attr('class', 'ticks-labels');
     }
-    
+
     sel = sel.selectAll('text.tick-label')
       .data(vm._ticks);
 
@@ -293,11 +294,11 @@ export default function(config) {
       duration = vm._config.transitionDuration,
       fromCenter = vm._radius + vm._config.axisLabelMargin,
       labels,
-      rects; 
-    
-      
- 
-    
+      rects;
+
+
+
+
     rects = svg.selectAll('rect.axis-label')
       .data(vm._axesData.list, function(d) { return d.axis; });
 
@@ -381,7 +382,7 @@ export default function(config) {
       return bundle;
     }, {keys: [], polygons:[]}).polygons;
 
-   
+
     gs = svg.selectAll('g.polygon-container')
       .data(groupedData, function(d) { return d.polygon + '-container'; });
 
